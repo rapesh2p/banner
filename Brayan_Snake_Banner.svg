@@ -1,0 +1,88 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-16 -32 880 192" width="880" height="192" role="img" aria-label="Snake eats the food that spells Brayan, with a progress bar">
+<title>BRAYAN — Snake progress banner</title>
+<desc>A neon snake randomly eats the glowing squares that form the word BRAYAN. The progress bar fills as each square is eaten.</desc>
+<style>
+  :root{--bg:#090d18;--grid:#17243a;--food:#42f5c5;--food2:#19b9ff;--snake:#a8ff45;--snake2:#24e6a5;--white:#eaffff}
+  *{box-sizing:border-box}
+  .ambient{fill:var(--grid);opacity:.7}
+  .food{fill:var(--food);filter:url(#glow);stroke:#baffef;stroke-width:.55}
+  .food.eaten{opacity:0;transform:scale(.1);transform-box:fill-box;transform-origin:center;transition:opacity .16s,transform .16s}
+  .snake-seg{fill:var(--snake);stroke:#e0ffb5;stroke-width:.65;filter:url(#glow)}
+  .snake-head{fill:#eaff9b;stroke:#fff;stroke-width:1;filter:url(#strongGlow)}
+  .eye{fill:#08111b}
+  .track{fill:#15243a;stroke:#29425d;stroke-width:.8}
+  .progress{fill:url(#bar);filter:url(#barGlow)}
+  .pct{fill:#c8fff1;font:700 9px ui-monospace,monospace;letter-spacing:.7px}
+  .caption{fill:#7895ac;font:600 7px ui-monospace,monospace;letter-spacing:1.8px}
+  .spark{fill:#b8fff1;opacity:0;filter:url(#glow)}
+</style>
+<defs>
+ <linearGradient id="bar" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#19b9ff"/><stop offset=".55" stop-color="#24e6a5"/><stop offset="1" stop-color="#b6ff45"/></linearGradient>
+ <filter id="glow" x="-180%" y="-180%" width="460%" height="460%"><feGaussianBlur stdDeviation="2.2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+ <filter id="strongGlow" x="-250%" y="-250%" width="600%" height="600%"><feGaussianBlur stdDeviation="3.2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+</defs>
+<rect x="-16" y="-32" width="880" height="192" rx="8" fill="var(--bg)"/>
+<g id="ambient"></g><g id="food"></g><g id="snake"></g><g id="sparkles"></g>
+<g aria-label="progress bar">
+ <text class="caption" x="0" y="130">FOOD CONSUMED</text>
+ <text class="pct" id="percent" x="834" y="130" text-anchor="end">0%</text>
+ <rect class="track" x="0" y="138" width="834" height="9" rx="4.5"/>
+ <rect class="progress" id="progress" x="0" y="138" width="0" height="9" rx="4.5"/>
+ <path d="M0 155H834" stroke="#18283d" stroke-width=".7"/>
+ <text class="caption" x="0" y="168">SNAKE.EXE</text>
+ <text class="caption" x="834" y="168" text-anchor="end">BRAYAN / 100%</text>
+</g>
+<script><![CDATA[
+(()=>{
+ const NS='http://www.w3.org/2000/svg', foodLayer=document.getElementById('food'), snakeLayer=document.getElementById('snake');
+ const cols=52, rows=7, step=16, x0=8, y0=2, size=11.5;
+ const glyphs={
+  B:['11110','10001','10001','11110','10001','10001','11110'],
+  R:['11110','10001','10001','11110','10100','10010','10001'],
+  A:['01110','10001','10001','11111','10001','10001','10001'],
+  Y:['10001','10001','01010','00100','00100','00100','00100'],
+  N:['10001','11001','10101','10011','10001','10001','10001']
+ };
+ // BRAYAN, rendered as individual food squares on the same compact grid.
+ const word='BRAYAN', gap=1, wordCols=word.length*5+(word.length-1)*gap;
+ const startCol=Math.floor((cols-wordCols)/2), letterCells=[];
+ word.split('').forEach((ch,li)=>glyphs[ch].forEach((line,r)=>[...line].forEach((bit,c)=>{
+  if(bit==='1') letterCells.push({x:x0+(startCol+li*6+c)*step,y:y0+r*step,letter:ch});
+ })));
+ // Dim background grid keeps the original banner's pixel-map feeling.
+ const ambient=document.getElementById('ambient');
+ for(let r=0;r<rows;r++) for(let c=0;c<cols;c++){
+  const rect=document.createElementNS(NS,'rect'); rect.setAttribute('x',x0+c*step);rect.setAttribute('y',y0+r*step);rect.setAttribute('width',size);rect.setAttribute('height',size);rect.setAttribute('rx','2.5');rect.setAttribute('class','ambient');ambient.appendChild(rect);
+ }
+ const targets=[];
+ letterCells.forEach((p,i)=>{
+  const el=document.createElementNS(NS,'rect');el.setAttribute('x',p.x);el.setAttribute('y',p.y);el.setAttribute('width',size);el.setAttribute('height',size);el.setAttribute('rx','2.8');el.setAttribute('class','food');el.dataset.i=i;foodLayer.appendChild(el);targets.push({...p,el});
+ });
+ // Randomized feeding order on every fresh load.
+ for(let i=targets.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[targets[i],targets[j]]=[targets[j],targets[i]];}
+ const total=targets.length, progress=document.getElementById('progress'), percent=document.getElementById('percent');
+ const body=[], segmentCount=13, segmentGap=7.2; let eaten=0, targetIndex=0, head={x:-5,y:80}, lastTime=0, accumulator=0, done=false;
+ const segs=[];
+ for(let i=0;i<segmentCount;i++){const e=document.createElementNS(NS,'circle');e.setAttribute('r',i===0?6.2:5.2);e.setAttribute('class',i===0?'snake-head':'snake-seg');snakeLayer.appendChild(e);segs.push(e);}
+ const eyes=document.createElementNS(NS,'g');eyes.innerHTML='<circle class="eye" r="1.15" cx="2" cy="-1.8"/><circle class="eye" r="1.15" cx="2" cy="2.1"/>';snakeLayer.appendChild(eyes);
+ body.push({x:head.x,y:head.y});
+ function distance(a,b){return Math.hypot(a.x-b.x,a.y-b.y)}
+ function pointAtTrail(d){let walked=0;for(let i=1;i<body.length;i++){const a=body[i-1],b=body[i],len=distance(a,b);if(walked+len>=d){const t=(d-walked)/(len||1);return{x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t};}walked+=len;}return body[body.length-1]||head;}
+ function updateSnake(){segs.forEach((el,i)=>{const p=pointAtTrail(i*segmentGap);el.setAttribute('cx',p.x);el.setAttribute('cy',p.y);});eyes.setAttribute('transform',`translate(${head.x} ${head.y})`);}
+ function finish(){done=true;percent.textContent='100%';progress.setAttribute('width','834');}
+ function frame(now){if(done)return;if(!lastTime)lastTime=now;const dt=Math.min((now-lastTime)/1000,.05);lastTime=now;
+  if(targetIndex<total){const target=targets[targetIndex];const dx=target.x+size/2-head.x,dy=target.y+size/2-head.y,d=Math.hypot(dx,dy);const speed=105;
+   if(d<speed*dt+1.5){head={x:target.x+size/2,y:target.y+size/2};target.el.classList.add('eaten');targetIndex++;eaten++;const pct=Math.round(eaten/total*100);progress.setAttribute('width',(834*eaten/total).toFixed(2));percent.textContent=pct+'%';
+    // Small celebratory particles at each bite.
+    for(let k=0;k<3;k++){const s=document.createElementNS(NS,'circle');s.setAttribute('cx',head.x+(Math.random()-.5)*15);s.setAttribute('cy',head.y+(Math.random()-.5)*15);s.setAttribute('r','1.5');s.setAttribute('class','spark');sparkles.appendChild(s);s.animate([{opacity:1,r:1.5},{opacity:0,r:0}],{duration:420});setTimeout(()=>s.remove(),450);}
+    if(targetIndex>=total){finish();}
+   }else{head.x+=dx/d*speed*dt;head.y+=dy/d*speed*dt;}
+  }
+  body.unshift({x:head.x,y:head.y});const maxTrail=segmentCount*segmentGap+30;let len=0,cut=body.length-1;for(let i=1;i<body.length;i++){len+=distance(body[i-1],body[i]);if(len>maxTrail){cut=i;break;}}if(cut<body.length-1)body.length=cut+1;
+  updateSnake();if(!done)requestAnimationFrame(frame);
+ }
+ // A short pause lets the word read clearly before the first bite.
+ setTimeout(()=>requestAnimationFrame(frame),900);
+})();
+]]></script>
+</svg>
